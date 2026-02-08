@@ -1,0 +1,76 @@
+// Step 1: CommandType.java
+
+package command;
+
+public enum CommandType {
+    PUT, GET, DELETE, STOP, START, EXIT
+}
+
+//Step 2: Command.java
+
+package command;
+
+public class Command {
+
+    private final CommandType type;
+    private final Integer key;
+    private final String value;
+    private final Long ttl;
+
+    public Command(CommandType type, Integer key, String value, Long ttl) {
+        this.type = type;
+        this.key = key;
+        this.value = value;
+        this.ttl = ttl;
+    }
+
+    public CommandType getType() { return type; }
+    public Integer getKey() { return key; }
+    public String getValue() { return value; }
+    public Long getTtl() { return ttl; }
+}
+
+//Step 3: CommandParser.java
+
+package command;
+
+import exception.*;
+
+public class CommandParser {
+
+    public static Command parse(String input) {
+
+        try {
+            String[] p = input.trim().split("\\s+");
+            CommandType type = CommandType.valueOf(p[0].toUpperCase());
+
+            switch (type) {
+
+                case PUT:
+                    Integer key = Integer.parseInt(p[1]);
+                    String value = p[2];
+                    long ttl = (p.length == 4) ? Long.parseLong(p[3]) : -1;
+
+                    if (ttl == 0)
+                        throw new InvalidTTLException();
+
+                    return new Command(type, key, value, ttl);
+
+                case GET:
+                case DELETE:
+                    return new Command(type, Integer.parseInt(p[1]), null, -1L);
+
+                case STOP:
+                case START:
+                case EXIT:
+                    return new Command(type, null, null, -1L);
+            }
+
+        } catch (Exception e) {
+            throw new InvalidCommandException("Invalid command");
+        }
+
+        throw new InvalidCommandException("Unknown command");
+    }
+}
+
