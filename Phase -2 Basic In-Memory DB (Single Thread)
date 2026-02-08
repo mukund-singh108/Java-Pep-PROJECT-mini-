@@ -1,0 +1,52 @@
+// Entry.java
+
+package db;
+
+public class Entry<T> {
+
+    T value;
+    long expiryTime;
+
+    public Entry(T value, long expiryTime) {
+        this.value = value;
+        this.expiryTime = expiryTime;
+    }
+}
+
+
+//InMemoryDatabase.java
+
+package db;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class InMemoryDatabase {
+
+    private final Map<Integer, Entry<String>> store = new HashMap<>();
+
+    public void put(Integer key, String value) {
+        store.put(key, new Entry<>(value, -1));
+    }
+
+    public String get(Integer key) {
+        Entry<String> e = store.get(key);
+        return (e == null) ? null : e.value;
+    }
+
+    public void delete(Integer key) {
+        store.remove(key);
+    }
+}
+
+//Viva questions
+
+
+
+Why HashMap enough initially?
+→ Single-threaded → no concurrency issues.
+
+Why key not generic?
+→ Assignment constraint: integer-only.
+
+
