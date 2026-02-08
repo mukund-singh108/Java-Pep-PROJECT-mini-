@@ -74,3 +74,10 @@ public class CommandParser {
     }
 }
 
+
+// Viva questions
+Why separate parsing from execution?
+→ Cleaner design, reusable parser, easier testing.
+
+What exceptions should be thrown?
+→ InvalidCommandException, InvalidTTLException.
