@@ -1,0 +1,231 @@
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+// Command-driven in-memory database with TTL and concurrency
+public class InMemoryDB {
+
+    // Supported commands
+    enum CommandType {
+        PUT, GET, DELETE, STOP, START, EXIT
+    }
+
+    // Custom exceptions
+    static class InvalidCommandException extends RuntimeException {
+        public InvalidCommandException(String msg) { super(msg); }
+    }
+
+    static class DatabaseStoppedException extends RuntimeException {
+        public DatabaseStoppedException() { super("Database is stopped"); }
+    }
+
+    static class KeyNotFoundException extends RuntimeException {
+        public KeyNotFoundException() { super("Key not found"); }
+    }
+
+    static class InvalidTTLException extends RuntimeException {
+        public InvalidTTLException() { super("TTL must be > 0"); }
+    }
+
+    // Parsed command object
+    static class Command {
+        CommandType type;
+        Integer key;
+        String value;
+        Long ttl;
+
+        Command(CommandType type, Integer key, String value, Long ttl) {
+            this.type = type;
+            this.key = key;
+            this.value = value;
+            this.ttl = ttl;
+        }
+    }
+
+    // Converts input text into a Command object
+    static class CommandParser {
+
+        static Command parse(String input) {
+
+            try {
+                String[] p = input.trim().split("\\s+");
+                CommandType type = CommandType.valueOf(p[0].toUpperCase());
+
+                switch (type) {
+
+                    case PUT:
+                        Integer key = Integer.parseInt(p[1]);
+                        String value = p[2];
+                        long ttl = (p.length == 4) ? Long.parseLong(p[3]) : -1;
+
+                        if (ttl == 0)
+                            throw new InvalidTTLException();
+
+                        return new Command(type, key, value, ttl);
+
+                    case GET:
+                    case DELETE:
+                        return new Command(type,
+                                Integer.parseInt(p[1]),
+                                null,
+                                -1L);
+
+                    case STOP:
+                    case START:
+                    case EXIT:
+                        return new Command(type, null, null, -1L);
+                }
+
+            } catch (Exception e) {
+                throw new InvalidCommandException("Invalid command");
+            }
+
+            throw new InvalidCommandException("Unknown command");
+        }
+    }
+
+    // Stores value with optional expiration time
+    static class Entry<T> {
+        T value;
+        long expiryTime;
+
+        Entry(T value, long expiryTime) {
+            this.value = value;
+            this.expiryTime = expiryTime;
+        }
+
+        boolean isExpired() {
+            return expiryTime != -1 &&
+                    System.currentTimeMillis() > expiryTime;
+        }
+    }
+
+    // Core database implementation
+    static class Database {
+
+        private final ConcurrentHashMap<Integer, Entry<String>> store =
+                new ConcurrentHashMap<>();
+
+        private volatile boolean running = true;
+
+        void put(Integer key, String value, long ttl) {
+            checkRunning();
+
+            long expiry = (ttl == -1)
+                    ? -1
+                    : System.currentTimeMillis() + ttl;
+
+            store.put(key, new Entry<>(value, expiry));
+        }
+
+        String get(Integer key) {
+            checkRunning();
+
+            Entry<String> e = store.get(key);
+
+            if (e == null)
+                throw new KeyNotFoundException();
+
+            if (e.isExpired()) {
+                store.remove(key);
+                return null;
+            }
+
+            return e.value;
+        }
+
+        void delete(Integer key) {
+            checkRunning();
+            store.remove(key);
+        }
+
+        // Removes expired entries
+        void cleanupExpired() {
+            store.forEach((k, v) -> {
+                if (v.isExpired())
+                    store.remove(k);
+            });
+        }
+
+        void stop() { running = false; }
+        void start() { running = true; }
+
+        void checkRunning() {
+            if (!running)
+                throw new DatabaseStoppedException();
+        }
+    }
+
+    // Background cleaner thread
+    static class CleanerThread extends Thread {
+
+        private final Database db;
+
+        CleanerThread(Database db) {
+            this.db = db;
+        }
+
+        public void run() {
+            while (true) {
+                db.cleanupExpired();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {}
+            }
+        }
+    }
+
+    // Program entry point
+    public static void main(String[] args) {
+
+        Database db = new Database();
+        new CleanerThread(db).start();
+
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("InMemoryDB ready");
+
+        while (true) {
+            try {
+
+                Command cmd =
+                        CommandParser.parse(sc.nextLine());
+
+                switch (cmd.type) {
+
+                    case PUT:
+                        db.put(cmd.key,
+                               cmd.value,
+                               cmd.ttl);
+                        System.out.println("OK");
+                        break;
+
+                    case GET:
+                        System.out.println(db.get(cmd.key));
+                        break;
+
+                    case DELETE:
+                        db.delete(cmd.key);
+                        System.out.println("Deleted");
+                        break;
+
+                    case STOP:
+                        db.stop();
+                        System.out.println("DB stopped");
+                        break;
+
+                    case START:
+                        db.start();
+                        System.out.println("DB started");
+                        break;
+
+                    case EXIT:
+                        System.out.println("Bye");
+                        System.exit(0);
+                }
+
+            } catch (Exception e) {
+                System.out.println("Error: " + e.getMessage());
+            }
+        }
+    }
+}
