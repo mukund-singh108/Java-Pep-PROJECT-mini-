@@ -1,0 +1,13 @@
+if (entry.isExpired()) {
+    store.remove(key);
+    return null;
+}
+
+
+// Viva questions
+
+Why lazy expiration simpler?
+→ No background scanning needed.
+
+Memory issue?
+→ Expired keys may stay until accessed.
