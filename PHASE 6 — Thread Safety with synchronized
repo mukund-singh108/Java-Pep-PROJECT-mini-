@@ -1,0 +1,15 @@
+public synchronized void put(...)
+public synchronized String get(...)
+public synchronized void delete(...)
+
+
+
+// Viva questions
+What object is locked?
+→ the database instance
+
+Can GET block PUT?
+→ yes, because same lock
+
+Tradeoff?
+→ safety vs performance
