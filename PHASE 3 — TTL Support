@@ -1,0 +1,18 @@
+// Add expiration logic
+
+public boolean isExpired() {
+    return expiryTime != -1 &&
+           System.currentTimeMillis() > expiryTime;
+}
+
+
+// Update PUT:
+
+long expiry = (ttl == -1) ? -1 :
+              System.currentTimeMillis() + ttl;
+
+
+//  Viva question
+
+Why store epoch time?
+→ Easy comparison using current time.
