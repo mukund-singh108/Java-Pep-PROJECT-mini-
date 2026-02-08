@@ -1,0 +1,12 @@
+while (running) {
+    db.cleanupExpiredKeys();
+    Thread.sleep(1000);
+}
+
+
+Phase 8 Viva
+
+Why iteration + modification dangerous?
+→ ConcurrentModificationException
+
+Solution → safe iteration
