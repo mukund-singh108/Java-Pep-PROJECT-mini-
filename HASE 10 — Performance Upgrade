@@ -1,0 +1,20 @@
+Replace:
+
+HashMap + synchronized
+
+
+with:
+ConcurrentHashMap
+
+
+Cleaner:
+store.forEach((k, v) -> {
+    if (v.isExpired())
+        store.remove(k);
+});
+
+
+//Phase 10 Viva
+
+Why ConcurrentHashMap better?
+→ fine-grained locking, better performance
