@@ -1,0 +1,10 @@
+private volatile boolean running = true;
+
+Check:
+if (!running) throw new DatabaseStoppedException();
+
+
+//Phase 7 Viva
+
+Why volatile?
+→ guarantees visibility between threads
