@@ -1,0 +1,14 @@
+
+Run multiple threads without protection.
+
+You will observe:
+
+lost updates
+
+inconsistent reads
+
+This phase is intentionally unsafe.
+
+// Viva questions
+Why HashMap unsafe?
+→ Not thread-safe → race conditions.
