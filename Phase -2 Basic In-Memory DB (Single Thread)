@@ -1,52 +1,64 @@
-// Entry.java
-
-package db;
-
-public class Entry<T> {
-
-    T value;
-    long expiryTime;
-
-    public Entry(T value, long expiryTime) {
-        this.value = value;
-        this.expiryTime = expiryTime;
-    }
-}
-
-
-//InMemoryDatabase.java
-
-package db;
-
 import java.util.HashMap;
 import java.util.Map;
 
-public class InMemoryDatabase {
+public class Main {
 
-    private final Map<Integer, Entry<String>> store = new HashMap<>();
+    // Entry class represents a single DB record
+    // It stores value + expiry time (for future TTL support)
+    static class Entry<T> {
+        T value;          // actual stored value
+        long expiryTime;  // -1 means no expiry
 
-    public void put(Integer key, String value) {
-        store.put(key, new Entry<>(value, -1));
+        public Entry(T value, long expiryTime) {
+            this.value = value;
+            this.expiryTime = expiryTime;
+        }
     }
 
-    public String get(Integer key) {
-        Entry<String> e = store.get(key);
-        return (e == null) ? null : e.value;
+    // Basic in-memory key-value database
+    // Uses HashMap because this version is single-threaded
+    static class InMemoryDatabase {
+
+        // Integer key → Entry object
+        private final Map<Integer, Entry<String>> store = new HashMap<>();
+
+        // insert or update value
+        public void put(Integer key, String value) {
+            store.put(key, new Entry<>(value, -1));
+        }
+
+        // fetch value by key
+        public String get(Integer key) {
+            Entry<String> e = store.get(key);
+
+            // if key not found → return null
+            if (e == null) return null;
+
+            return e.value;
+        }
+
+        // remove key from DB
+        public void delete(Integer key) {
+            store.remove(key);
+        }
     }
 
-    public void delete(Integer key) {
-        store.remove(key);
+    // main method used to test database
+    public static void main(String[] args) {
+
+        InMemoryDatabase db = new InMemoryDatabase();
+
+        // sample inserts
+        db.put(1, "apple");
+        db.put(2, "banana");
+
+        // fetch values
+        System.out.println("GET 1 → " + db.get(1));
+        System.out.println("GET 2 → " + db.get(2));
+
+        // delete and test again
+        db.delete(1);
+
+        System.out.println("After delete GET 1 → " + db.get(1));
     }
 }
-
-//Viva questions
-
-
-
-Why HashMap enough initially?
-→ Single-threaded → no concurrency issues.
-
-Why key not generic?
-→ Assignment constraint: integer-only.
-
-
