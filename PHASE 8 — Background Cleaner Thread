@@ -1,12 +1,56 @@
-while (running) {
-    db.cleanupExpiredKeys();
-    Thread.sleep(1000);
+import java.util.*;
+
+public class Main {
+
+    static class DB {
+        Map<Integer, Long> store = new HashMap<>();
+        volatile boolean running = true;
+
+        synchronized void put(int k, long ttl) {
+            store.put(k, System.currentTimeMillis() + ttl);
+            System.out.println("Inserted key " + k);
+        }
+
+        synchronized void cleanup() {
+            Iterator<Map.Entry<Integer, Long>> it = store.entrySet().iterator();
+            while (it.hasNext()) {
+                Map.Entry<Integer, Long> e = it.next();
+                if (System.currentTimeMillis() > e.getValue()) {
+                    System.out.println("Expired key " + e.getKey());
+                    it.remove();
+                }
+            }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        DB db = new DB();
+
+        new Thread(() -> {
+            while (db.running) {
+                db.cleanup();
+                try { Thread.sleep(1000); } catch (Exception ignored) {}
+            }
+        }).start();
+
+        db.put(1, 2000);
+
+        Thread.sleep(4000);
+        db.running = false;
+    }
 }
 
 
-Phase 8 Viva
 
-Why iteration + modification dangerous?
-→ ConcurrentModificationException
+/*Phase 8 — Cleaner thread
 
-Solution → safe iteration
+Q: Why iteration + modification dangerous?
+→ ConcurrentModificationException.
+
+Q: Safe solution?
+→ Iterator.remove().
+
+Q: Why background cleaner thread?
+→ Automatic expiry cleanup. 
+*/
