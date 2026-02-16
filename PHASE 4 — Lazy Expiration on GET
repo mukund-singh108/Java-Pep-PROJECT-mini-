@@ -1,13 +1,80 @@
-if (entry.isExpired()) {
-    store.remove(key);
-    return null;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Main {
+
+    // Entry stores value + expiry timestamp
+    static class Entry<T> {
+        T value;
+        long expiryTime;
+
+        public Entry(T value, long expiryTime) {
+            this.value = value;
+            this.expiryTime = expiryTime;
+        }
+
+        // check expiration
+        public boolean isExpired() {
+            return expiryTime != -1 &&
+                   System.currentTimeMillis() > expiryTime;
+        }
+    }
+
+    // In-memory DB with lazy expiration
+    static class InMemoryDatabase {
+
+        private final Map<Integer, Entry<String>> store = new HashMap<>();
+
+        // PUT with TTL
+        public void put(Integer key, String value, long ttl) {
+            long expiry = (ttl == -1)
+                    ? -1
+                    : System.currentTimeMillis() + ttl;
+
+            store.put(key, new Entry<>(value, expiry));
+        }
+
+        // GET with lazy expiration
+        public String get(Integer key) {
+            Entry<String> entry = store.get(key);
+
+            if (entry == null) return null;
+
+            // lazy cleanup happens only on access
+            if (entry.isExpired()) {
+                store.remove(key);
+                return null;
+            }
+
+            return entry.value;
+        }
+
+        public void delete(Integer key) {
+            store.remove(key);
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+
+        InMemoryDatabase db = new InMemoryDatabase();
+
+        db.put(1, "apple", 2000);
+
+        System.out.println("GET 1 -> " + db.get(1));
+
+        Thread.sleep(3000);
+
+        System.out.println("After expiry GET 1 -> " + db.get(1));
+    }
 }
 
 
-// Viva questions
+/*
+Viva notes:
 
 Why lazy expiration simpler?
-→ No background scanning needed.
+-> No background scanning needed.
 
 Memory issue?
-→ Expired keys may stay until accessed.
+-> Expired keys may stay until accessed.
+*/
