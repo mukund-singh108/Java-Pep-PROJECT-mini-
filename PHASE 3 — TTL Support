@@ -1,18 +1,92 @@
-// Add expiration logic
+import java.util.HashMap;
+import java.util.Map;
 
-public boolean isExpired() {
-    return expiryTime != -1 &&
-           System.currentTimeMillis() > expiryTime;
+public class Main {
+
+    // Entry represents one stored record
+    // expiryTime = -1 means no expiration
+
+
+    static class Entry<T> {
+        T value;
+        long expiryTime;
+
+        public Entry(T value, long expiryTime) {
+            this.value = value;
+            this.expiryTime = expiryTime;
+        }
+
+        // check if entry expired
+        public boolean isExpired() {
+            return expiryTime != -1 &&
+                   System.currentTimeMillis() > expiryTime;
+        }
+    }
+
+    // simple in-memory DB using HashMap
+
+    static class InMemoryDatabase {
+
+        private final Map<Integer, Entry<String>> store = new HashMap<>();
+
+        // PUT with optional TTL
+
+
+        public void put(Integer key, String value, long ttl) {
+
+            // convert TTL to absolute epoch time
+            long expiry = (ttl == -1)
+                    ? -1
+                    : System.currentTimeMillis() + ttl;
+
+            store.put(key, new Entry<>(value, expiry));
+        }
+
+        // GET with expiration check
+
+
+        public String get(Integer key) {
+            Entry<String> e = store.get(key);
+
+            if (e == null) return null;
+
+            // remove expired entries lazily
+            if (e.isExpired()) {
+                store.remove(key);
+                return null;
+            }
+
+            return e.value;
+        }
+
+        public void delete(Integer key) {
+            store.remove(key);
+        }
+    }
+
+    // main method for testing
+
+
+    public static void main(String[] args) throws InterruptedException {
+
+        InMemoryDatabase db = new InMemoryDatabase();
+
+        // put with TTL = 2 seconds
+
+        db.put(1, "apple", 2000);
+
+        System.out.println("GET 1 -> " + db.get(1));
+
+        // wait 3 seconds to expire
+
+        Thread.sleep(3000);
+
+        System.out.println("After expiry GET 1 -> " + db.get(1));
+    }
 }
 
-
-// Update PUT:
-
-long expiry = (ttl == -1) ? -1 :
-              System.currentTimeMillis() + ttl;
-
-
-//  Viva question
-
+/*
+Viva note:
 Why store epoch time?
-→ Easy comparison using current time.
+-> Easy comparison using current time.
+*/
