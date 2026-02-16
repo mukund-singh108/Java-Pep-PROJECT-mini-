@@ -1,83 +1,113 @@
+public class Main {
+
+    
 // Step 1: CommandType.java
+    enum CommandType {
+        PUT, GET, DELETE, STOP, START, EXIT
+    }
 
-package command;
+    // ===== EXCEPTIONS =====
+    static class InvalidCommandException extends RuntimeException {
+        public InvalidCommandException(String msg) {
+            super(msg);
+        }
+    }
 
-public enum CommandType {
-    PUT, GET, DELETE, STOP, START, EXIT
-}
+    static class InvalidTTLException extends RuntimeException {
+        public InvalidTTLException() {
+            super("TTL cannot be zero");
+        }
+    }
+
+   
 
 //Step 2: Command.java
 
-package command;
+    static class Command {
+        private final CommandType type;
+        private final Integer key;
+        private final String value;
+        private final Long ttl;
 
-public class Command {
-
-    private final CommandType type;
-    private final Integer key;
-    private final String value;
-    private final Long ttl;
-
-    public Command(CommandType type, Integer key, String value, Long ttl) {
-        this.type = type;
-        this.key = key;
-        this.value = value;
-        this.ttl = ttl;
-    }
-
-    public CommandType getType() { return type; }
-    public Integer getKey() { return key; }
-    public String getValue() { return value; }
-    public Long getTtl() { return ttl; }
-}
-
-//Step 3: CommandParser.java
-
-package command;
-
-import exception.*;
-
-public class CommandParser {
-
-    public static Command parse(String input) {
-
-        try {
-            String[] p = input.trim().split("\\s+");
-            CommandType type = CommandType.valueOf(p[0].toUpperCase());
-
-            switch (type) {
-
-                case PUT:
-                    Integer key = Integer.parseInt(p[1]);
-                    String value = p[2];
-                    long ttl = (p.length == 4) ? Long.parseLong(p[3]) : -1;
-
-                    if (ttl == 0)
-                        throw new InvalidTTLException();
-
-                    return new Command(type, key, value, ttl);
-
-                case GET:
-                case DELETE:
-                    return new Command(type, Integer.parseInt(p[1]), null, -1L);
-
-                case STOP:
-                case START:
-                case EXIT:
-                    return new Command(type, null, null, -1L);
-            }
-
-        } catch (Exception e) {
-            throw new InvalidCommandException("Invalid command");
+        public Command(CommandType type, Integer key, String value, Long ttl) {
+            this.type = type;
+            this.key = key;
+            this.value = value;
+            this.ttl = ttl;
         }
 
-        throw new InvalidCommandException("Unknown command");
+        public CommandType getType() { return type; }
+        public Integer getKey() { return key; }
+        public String getValue() { return value; }
+        public Long getTtl() { return ttl; }
+
+        public String toString() {
+            return "Command{" +
+                    "type=" + type +
+                    ", key=" + key +
+                    ", value=" + value +
+                    ", ttl=" + ttl +
+                    '}';
+        }
+    }
+
+    //Step 3: CommandParser.java
+
+
+    static class CommandParser {
+
+        public static Command parse(String input) {
+            try {
+                String[] p = input.trim().split("\\s+");
+                CommandType type = CommandType.valueOf(p[0].toUpperCase());
+
+                switch (type) {
+
+                    case PUT:
+                        Integer key = Integer.parseInt(p[1]);
+                        String value = p[2];
+                        long ttl = (p.length == 4) ? Long.parseLong(p[3]) : -1;
+
+                        if (ttl == 0)
+                            throw new InvalidTTLException();
+
+                        return new Command(type, key, value, ttl);
+
+                    case GET:
+                    case DELETE:
+                        return new Command(type, Integer.parseInt(p[1]), null, -1L);
+
+                    case STOP:
+                    case START:
+                    case EXIT:
+                        return new Command(type, null, null, -1L);
+                }
+
+            } catch (Exception e) {
+                throw new InvalidCommandException("Invalid command");
+            }
+
+            throw new InvalidCommandException("Unknown command");
+        }
+    }
+
+    // MAIN
+    public static void main(String[] args) {
+
+        String[] tests = {
+                "PUT 1 apple 10",
+                "GET 1",
+                "DELETE 2",
+                "EXIT"
+        };
+
+        for (String t : tests) {
+            try {
+                Command cmd = CommandParser.parse(t);
+                System.out.println(cmd);
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
     }
 }
-
-
-// Viva questions
-Why separate parsing from execution?
-→ Cleaner design, reusable parser, easier testing.
-
-What exceptions should be thrown?
-→ InvalidCommandException, InvalidTTLException.
