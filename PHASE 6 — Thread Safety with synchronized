@@ -1,15 +1,64 @@
-public synchronized void put(...)
-public synchronized String get(...)
-public synchronized void delete(...)
+import java.util.HashMap;
+import java.util.Map;
 
+public class Main {
 
+    // thread-safe DB using synchronized methods
+    static class InMemoryDatabase {
 
-// Viva questions
+        private final Map<Integer, String> store = new HashMap<>();
+
+        // synchronized PUT
+        public synchronized void put(Integer key, String value) {
+            store.put(key, value);
+        }
+
+        // synchronized GET
+        public synchronized String get(Integer key) {
+            return store.get(key);
+        }
+
+        // synchronized DELETE
+        public synchronized void delete(Integer key) {
+            store.remove(key);
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+
+        InMemoryDatabase db = new InMemoryDatabase();
+
+        Thread writer = new Thread(() -> {
+            for (int i = 0; i < 100000; i++) {
+                db.put(1, "value-" + i);
+            }
+        });
+
+        Thread reader = new Thread(() -> {
+            for (int i = 0; i < 100000; i++) {
+                db.get(1);
+            }
+        });
+
+        writer.start();
+        reader.start();
+
+        writer.join();
+        reader.join();
+
+        System.out.println("Finished safe run.");
+    }
+}
+
+/*
+Viva:
+
 What object is locked?
-→ the database instance
+-> the database instance
 
 Can GET block PUT?
-→ yes, because same lock
+-> yes, because same lock
 
 Tradeoff?
-→ safety vs performance
+-> safety vs performance
+*/
