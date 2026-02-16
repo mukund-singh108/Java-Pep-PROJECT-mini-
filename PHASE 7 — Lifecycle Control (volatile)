@@ -1,10 +1,73 @@
-private volatile boolean running = true;
+import java.util.HashMap;
+import java.util.Map;
 
-Check:
-if (!running) throw new DatabaseStoppedException();
+public class Main {
 
+    // custom exception when DB is stopped
+    static class DatabaseStoppedException extends RuntimeException {
+        public DatabaseStoppedException() {
+            super("Database is stopped");
+        }
+    }
 
-//Phase 7 Viva
+    static class InMemoryDatabase {
+
+        private final Map<Integer, String> store = new HashMap<>();
+
+        // volatile ensures all threads see latest value
+        private volatile boolean running = true;
+
+        // lifecycle control
+        public void stop() {
+            running = false;
+        }
+
+        public void start() {
+            running = true;
+        }
+
+        // check before any operation
+        private void checkRunning() {
+            if (!running)
+                throw new DatabaseStoppedException();
+        }
+
+        public synchronized void put(Integer key, String value) {
+            checkRunning();
+            store.put(key, value);
+        }
+
+        public synchronized String get(Integer key) {
+            checkRunning();
+            return store.get(key);
+        }
+
+        public synchronized void delete(Integer key) {
+            checkRunning();
+            store.remove(key);
+        }
+    }
+
+    public static void main(String[] args) {
+
+        InMemoryDatabase db = new InMemoryDatabase();
+
+        db.put(1, "apple");
+        System.out.println("GET 1 -> " + db.get(1));
+
+        db.stop();
+
+        try {
+            db.get(1);
+        } catch (DatabaseStoppedException e) {
+            System.out.println("Blocked after stop: " + e.getMessage());
+        }
+    }
+}
+
+/*
+Phase 7 Viva:
 
 Why volatile?
-→ guarantees visibility between threads
+-> guarantees visibility between threads
+*/
