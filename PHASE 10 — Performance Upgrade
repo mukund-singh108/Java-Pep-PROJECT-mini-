@@ -1,20 +1,59 @@
-Replace:
+import java.util.concurrent.ConcurrentHashMap;
 
-HashMap + synchronized
+public class Main {
 
+    static class Entry {
+        long expiry;
+        Entry(long ttl) {
+            expiry = System.currentTimeMillis() + ttl;
+        }
+        boolean isExpired() {
+            return System.currentTimeMillis() > expiry;
+        }
+    }
 
-with:
-ConcurrentHashMap
+    static class DB {
 
+        // no synchronized needed
+        ConcurrentHashMap<Integer, Entry> store = new ConcurrentHashMap<>();
+        volatile boolean running = true;
 
-Cleaner:
-store.forEach((k, v) -> {
-    if (v.isExpired())
-        store.remove(k);
-});
+        void put(int k, long ttl) {
+            store.put(k, new Entry(ttl));
+        }
 
+        // safe concurrent cleanup
+        void cleanup() {
+            store.forEach((k, v) -> {
+                if (v.isExpired())
+                    store.remove(k);
+            });
+        }
+    }
 
-//Phase 10 Viva
+    public static void main(String[] args) throws Exception {
+
+        DB db = new DB();
+
+        new Thread(() -> {
+            while (db.running) {
+                db.cleanup();
+                try { Thread.sleep(1000); } catch (Exception ignored) {}
+            }
+        }).start();
+
+        db.put(1, 2000);
+
+        Thread.sleep(4000);
+        db.running = false;
+
+        System.out.println("Finished.");
+    }
+}
+
+/*
+Phase 10 Viva:
 
 Why ConcurrentHashMap better?
-→ fine-grained locking, better performance
+-> fine-grained locking, better performance
+*/
