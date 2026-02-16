@@ -1,14 +1,63 @@
+import java.util.HashMap;
+import java.util.Map;
 
+public class Main {
+
+    // intentionally unsafe DB (no synchronization)
+    static class InMemoryDatabase {
+
+        private final Map<Integer, String> store = new HashMap<>();
+
+        public void put(Integer key, String value) {
+            store.put(key, value);
+        }
+
+        public String get(Integer key) {
+            return store.get(key);
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+
+        InMemoryDatabase db = new InMemoryDatabase();
+
+        // writer thread keeps updating same key
+        Thread writer = new Thread(() -> {
+            for (int i = 0; i < 100000; i++) {
+                db.put(1, "value-" + i);
+            }
+        });
+
+        // reader thread reads repeatedly
+        Thread reader = new Thread(() -> {
+            for (int i = 0; i < 100000; i++) {
+                String v = db.get(1);
+                if (v == null) {
+                    System.out.println("Inconsistent read detected!");
+                }
+            }
+        });
+
+        writer.start();
+        reader.start();
+
+        writer.join();
+        reader.join();
+
+        System.out.println("Finished unsafe run.");
+    }
+}
+
+/*
 Run multiple threads without protection.
 
-You will observe:
-
-lost updates
-
-inconsistent reads
+You may observe:
+- lost updates
+- inconsistent reads
 
 This phase is intentionally unsafe.
 
-// Viva questions
+Viva:
 Why HashMap unsafe?
-→ Not thread-safe → race conditions.
+-> Not thread-safe -> race conditions.
+*/
