@@ -6,8 +6,8 @@ public class Main {
         PUT, GET, DELETE, STOP, START, EXIT
     }
 
-    // ===== EXCEPTIONS =====
-    static class InvalidCommandException extends RuntimeException {
+    //  EXCEPTIONS 
+static class InvalidCommandException extends RuntimeException {
         public InvalidCommandException(String msg) {
             super(msg);
         }
